@@ -56,10 +56,20 @@ MATCH_THRESHOLD = 0.55
 IMAGE_SIZE = 160
 
 def build_models(device):
-    mtcnn = MTCNN(image_size=IMAGE_SIZE, margin=14, keep_all=True, device=device)
-    resnet = InceptionResnetV1(pretrained='vggface2').eval()
+    # Force MTCNN to run on CPU to avoid DirectML tensor rank issues
+    mtcnn = MTCNN(
+        image_size=IMAGE_SIZE,
+        margin=14,
+        keep_all=True,
+        device=torch.device("cpu"),
+        weights_only=True  # Add weights_only to avoid warnings
+    )
+    
+    # Load ResNet with weights_only and move to DirectML device
+    resnet = InceptionResnetV1(pretrained='vggface2', weights_only=True).eval()
     try:
         resnet = resnet.to(device)
+        print("[INFO] InceptionResnetV1 running on DirectML device")
     except Exception as e:
         print(f"[WARNING] Could not move InceptionResnetV1 to DirectML ({device}): {e}")
         print("Falling back to CPU.")
